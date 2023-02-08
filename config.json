@@ -1,0 +1,11 @@
+{
+  "name": "contibit-poster",
+  "spreadsheetId": "1vmc0SZkbecLETFBCq4xcs7YYbYZhQLWWSlqvr2jffnM",
+  "worksheet": "contibit-poster",
+  "defaultLang": "en-US",
+  "langs": [
+    "zh-TW",
+    "zh-CN",
+    "en-US"
+  ]
+}
