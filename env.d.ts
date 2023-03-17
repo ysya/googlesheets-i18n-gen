@@ -1,4 +1,4 @@
-interface Config {
+export interface Config {
   /** 專案名稱 */
   readonly name: string
   /** google sheet id */
@@ -9,4 +9,5 @@ interface Config {
   readonly defaultLang: string
   /** 目標語言 */
   readonly langs: string[]
+  readonly outputPath: string[]
 }

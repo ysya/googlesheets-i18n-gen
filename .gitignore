@@ -38,3 +38,4 @@ token.json
 credentials.json
 spreadsheet.csv
 output/*
+*.config.json

@@ -1,25 +1,44 @@
-import { writeFileSync } from 'fs'
+import { existsSync, mkdirSync, writeFileSync } from 'fs'
 import { authorize, getDataFromSpreadsheet } from './googleSheets'
-import config from '../config.json'
+import { Command } from 'commander'
+import { Config } from '../env'
+const program = new Command()
+program
+  .name('i18n-gen')
+  .description('generate i18n from google sheet')
+  .version('0.1.0')
+program
+  .command('gen')
+  .description('name of config')
+  .argument('<projectName>', 'name of project config')
+  .action((projectName) => {
+    console.log('project config:', projectName)
+    main(projectName)
+  })
+program.parse()
+
 interface Data {
   [key: string]: string
 }
 
 /** 讀取 csv */
-const readCSV = async () => {
+const readCSV = async (spreadsheetId: string, worksheet: string) => {
   const gAuth = await authorize()
   if (!gAuth) {
     throw Error('google auth 錯誤')
   }
-  let arr_ = await getDataFromSpreadsheet(gAuth)
+  let arr_ = await getDataFromSpreadsheet(gAuth, { spreadsheetId, worksheet })
   return arr_
 }
 
 /** csv 陣列整理 */
-const filterCSVData = async (/** 目標語言 */ lang: string): Promise<Data> => {
-  const csv = await readCSV()
+const filterCsvData = async (
+  /** 預設語言 */ defaultLang: string,
+  /** 目標語言 */ lang: string,
+  /** 目標csv */ csv: any[][]
+): Promise<Data> => {
   /** 預設語言 目標語言沒有翻譯時使用 */
-  const defaultLangIndex = csv[0].indexOf(config.defaultLang)
+  const defaultLangIndex = csv[0].indexOf(defaultLang)
   if (defaultLangIndex < 0) {
     console.log('Cant find default lang in google sheet')
     process.exit()
@@ -47,16 +66,28 @@ const filterCSVData = async (/** 目標語言 */ lang: string): Promise<Data> =>
   return d
 }
 
-const main = async () => {
+async function checkFolderExists(dirPath: string) {
+  if (!existsSync(dirPath)) {
+    mkdirSync(dirPath, { recursive: true })
+  }
+}
+
+async function main(projectName: string) {
+  const config: Config = await import(`../${projectName}.config.json`)
+  // console.log(config)
   config.langs.forEach(async (x) => {
-    const json = await filterCSVData(x)
-    try {
-      writeFileSync(`output/${x}.json`, JSON.stringify(json))
-    } catch (error) {
-      console.log(error)
-    }
+    const csv = await readCSV(config.spreadsheetId, config.worksheet)
+    const json = await filterCsvData(config.defaultLang, x, csv)
+    // 遍歷指定路徑
+    config.outputPath.forEach(async (y) => {
+      const outPath = `${y}/${projectName}`
+      try {
+        await checkFolderExists(outPath)
+        writeFileSync(`${outPath}/${x}.json`, JSON.stringify(json))
+      } catch (error) {
+        console.log(error)
+      }
+    })
   })
   console.log('Generation Success!')
 }
-
-main()

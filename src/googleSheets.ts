@@ -4,7 +4,6 @@ import { google } from 'googleapis'
 import { authenticate } from '@google-cloud/local-auth'
 import { OAuth2Client } from 'google-auth-library'
 import { JSONClient } from 'google-auth-library/build/src/auth/googleauth'
-import config from '../config.json'
 
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
 const TOKEN_PATH = path.join(process.cwd(), 'token.json')
@@ -54,11 +53,14 @@ export async function authorize() {
 }
 
 /** 從 google spreadsheet 拿 csv */
-export async function getDataFromSpreadsheet(auth: JSONClient) {
+export async function getDataFromSpreadsheet(
+  auth: JSONClient,
+  options: { spreadsheetId: string; worksheet: string }
+) {
   const sheets = google.sheets({ version: 'v4', auth })
   const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: config.spreadsheetId,
-    range: config.worksheet,
+    spreadsheetId: options.spreadsheetId,
+    range: options.worksheet,
   })
   const rows = res.data.values?.filter((x) => x.length > 0)
   if (!rows || rows.length === 0) {
