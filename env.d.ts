@@ -9,5 +9,6 @@ export interface Config {
   readonly defaultLang: string
   /** 目標語言 */
   readonly langs: string[]
+  readonly langKey: string
   readonly outputPath: string[]
 }

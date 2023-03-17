@@ -35,26 +35,31 @@ const readCSV = async (spreadsheetId: string, worksheet: string) => {
 const filterCsvData = async (
   /** 預設語言 */ defaultLang: string,
   /** 目標語言 */ lang: string,
+  /** key 欄位名稱 */ langKey: string,
   /** 目標csv */ csv: any[][]
 ): Promise<Data> => {
   /** 預設語言 目標語言沒有翻譯時使用 */
   const defaultLangIndex = csv[0].indexOf(defaultLang)
   if (defaultLangIndex < 0) {
-    console.log('Cant find default lang in google sheet')
-    process.exit()
+    throw new Error('Cant find default lang in google sheet')
   }
   /** 目標語言 */
   const targetLangIndex = csv[0].indexOf(lang)
   if (targetLangIndex < 0) {
-    console.log('Cant find target lang in google sheet')
-    process.exit()
+    throw new Error('Cant find target lang in google sheet')
+  }
+
+  /** key 欄位 */
+  const keyIndex = csv[0].indexOf(langKey)
+  if (keyIndex < 0) {
+    throw new Error('Cant find langKey in google sheet')
   }
 
   let d: Data = {}
   csv.forEach((x: any, index: number) => {
     // 略過第一行標題
     if (index == 0) return
-    const langKey = `${x[0]}.${x[1]}`
+    const langKey = x[keyIndex]
     const langValue = x[targetLangIndex]
     // 若目標語言沒有值，使用預設語言
     if (langValue && langValue.length <= 0) {
@@ -73,21 +78,30 @@ async function checkFolderExists(dirPath: string) {
 }
 
 async function main(projectName: string) {
-  const config: Config = await import(`../${projectName}.config.json`)
-  // console.log(config)
-  config.langs.forEach(async (x) => {
-    const csv = await readCSV(config.spreadsheetId, config.worksheet)
-    const json = await filterCsvData(config.defaultLang, x, csv)
-    // 遍歷指定路徑
-    config.outputPath.forEach(async (y) => {
-      const outPath = `${y}/${projectName}`
-      try {
-        await checkFolderExists(outPath)
-        writeFileSync(`${outPath}/${x}.json`, JSON.stringify(json))
-      } catch (error) {
-        console.log(error)
-      }
+  try {
+    const config: Config = await import(`../${projectName}.config.json`)
+    // console.log(config)
+    config.langs.forEach(async (x) => {
+      const csv = await readCSV(config.spreadsheetId, config.worksheet)
+      const json = await filterCsvData(
+        config.defaultLang,
+        x,
+        config.langKey,
+        csv
+      )
+      // 遍歷指定路徑
+      config.outputPath.forEach(async (y) => {
+        const outPath = `${y}/${projectName}`
+        try {
+          await checkFolderExists(outPath)
+          writeFileSync(`${outPath}/${x}.json`, JSON.stringify(json))
+        } catch (error) {
+          throw error
+        }
+      })
     })
-  })
-  console.log('Generation Success!')
+    console.log('Generation Success!')
+  } catch (error) {
+    console.log(error)
+  }
 }
